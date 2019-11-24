@@ -4,43 +4,73 @@ var inquirer = require("inquirer");
 var connection = mysql.createConnection({
   host: "localhost",
 
-  // Your port; if not 3306
+  // Port
   port: 3306,
 
-  // Your username
+  // Username
   user: "root",
 
-  // Your password
+  // Password
   password: "Ir0cky00",
   database: "bamazon_db"
 });
 
-connection.connect(function(err) {
+connection.connect(function (err) {
   if (err) throw err;
   console.log("connected as id " + connection.threadId);
-  purchaseProduct();
+  displayProduct();
 });
 
-function purchaseProduct() {
-  connection.query("SELECT * FROM products", function(err, res) {
+function displayProduct() {
+  connection.query("SELECT * FROM products", function (err, res) {
     if (err) throw err;
-    console.log(res); 
-    inquirer
-    .prompt([
-    {
-      name: "buy",
-      type: "list",
+    console.log(res);
+    purchasePrompt();
+  });
+}
+
+function purchasePrompt() {
+  inquirer.prompt([{
+      name: "ID",
+      type: "input",
       message: "What is the Item ID of the product you would like to purchase?",
-      choices: ["Item1", "Item2", "Item3", "Item4", "Item5", "Item6", "Item7", "Item8", "Item9", "Item10", ]
     },
     {
       name: "quantity",
-      type: "number",
-      message: "How many would you like?"
-    }])
-    connection.end();
+      type: "input",
+      message: "How many would you like?",
+    }
+  ]).then(function (answers) {
+    console.log(answers);
+    var itemID = answers.ID;
+    var purchQuantity = answers.quantity;
+    purchaseItems(itemID, purchQuantity);
+  });
+};
+
+
+
+function purchaseItems(itemID, purchQuantity) {
+  connection.query("Select * FROM products WHERE item_id = " + itemID, function (err, res) {
+    if (err) {
+      console.log(err)
+    };
+    if (purchQuantity <= res[0].stock_quantity) {
+      var totalCost = res[0].price * purchQuantity;
+      console.log("Your order is in stock!");
+      console.log("The total cost for " + purchQuantity + " " + res[0].product_name + " is " + totalCost + ". Thank you!");
+
+      connection.query("UPDATE products SET stock_quantity = "(stock_quantity - purchQuantity) + " WHERE item_id = " + itemID);
+    } else {
+      console.log("Uh oh, sorry we dont't have enough " + res[0].product_name + "s to complete your order.");
+    };
+    displayProduct();
   });
 }
+
+// connection.end()
+
+// },
 
 //     .then(function(answer) {
 //       // based on their answer, either call the bid or the post functions
@@ -55,4 +85,3 @@ function purchaseProduct() {
 //     });
 
 //   }
-  
